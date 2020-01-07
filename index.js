@@ -7,7 +7,7 @@ app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
 
 let app_name = 'MYAPP';
-let app_host = 'https://bae31e03.ngrok.io'
+let app_host = 'https://411815d1.ngrok.io'
 let wp_host = 'http://localhost:8080/QH1901'
 let url = `http://localhost:8080/QH1901/wc-auth/v1/authorize?app_name=${app_name}&scope=read_write&user_id=1&return_url=${app_host}/return_url&callback_url=${app_host}/callback_url`;
 console.log(url)
@@ -16,7 +16,7 @@ app.get('/return_url', (req, res) => {
 	res.send(req.body)
 })
 
-app.post('/callback_url', (req, res) => {
+app.post('/callback_url', async (req, res) => {
 	let { key_id, user_id, consumer_key, consumer_secret, key_permissions } = req.body;
 	var WooCommerce = new WooCommerceAPI({
 		url: app_host,
@@ -25,6 +25,17 @@ app.post('/callback_url', (req, res) => {
 		wpAPI: true,
 		version: 'wc/v1'
 	});
+
+	let webhooks = await callApi.get(WooCommerce, 'webhooks');
+	for (let i = 0; i < listWebhooks.length; i++) {
+		let webhook = listWebhooks[i];
+		let found = webhooks.find(e => e.topic == webhook.topic);
+		if(found){
+			updateHook({ id: found.id, ...webhook, delivery_url: pathHook})
+		} else{
+			createHook({ id: found.id, ...webhook, delivery_url: pathHook})
+		}
+	}
 	res.send(req.body)
 })
 
@@ -121,35 +132,34 @@ var WooCommerce = new WooCommerceAPI({
 	version: 'wc/v1'
 });
 
-const createHook = async hook => {
+const createHook = hook => {
 	try{
 		console.log('create')
-		await callApi.post(WooCommerce, 'webhooks', hook);
+		callApi.post(WooCommerce, 'webhooks', hook);
 	} catch(error){
 		console.log(error)
 	}
 }
 
-const updateHook = async hook => {
+const updateHook = hook => {
 	try{
-		console.log('update')
-		await callApi.put(WooCommerce, 'webhooks', hook);
+		console.log(`webhooks/${hook.id}`)
+		callApi.put(WooCommerce, `webhooks/${hook.id}`, hook);
 	} catch(error){
 		console.log(error)
 	}
 }
 
 async function test(){
-	
 	let webhooks = await callApi.get(WooCommerce, 'webhooks');
 	console.log(webhooks)
 	for (let i = 0; i < listWebhooks.length; i++) {
 		let webhook = listWebhooks[i];
 		let found = webhooks.find(e => e.topic == webhook.topic);
 		if(found){
-			await updateHook({...webhook, delivery_url: pathHook})
+			updateHook({ id: found.id, ...webhook, delivery_url: pathHook})
 		} else{
-			await createHook({...webhook, delivery_url: pathHook})
+			createHook({ id: found.id, ...webhook, delivery_url: pathHook})
 		}
 	}
 }
