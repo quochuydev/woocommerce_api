@@ -4,23 +4,65 @@ const _ = require('lodash');
 const bodyParser= require('body-parser');
 const app = express();
 
-app.use(bodyParser.urlencoded({ extended: false }))
-app.use(bodyParser.json())
-
 let app_name = 'MYAPP';
 let version = 'wc/v1';
 
-let app_host = 'https://cc86beb9.ngrok.io'
+let app_host = 'https://ebab3545.ngrok.io'
 let wp_host = 'http://localhost:8080/QH1901'
 
 let url = `${wp_host}/wc-auth/v1/authorize?app_name=${app_name}&scope=read_write&user_id=1&return_url=${app_host}/return_url&callback_url=${app_host}/callback_url`;
 console.log(url)
 
-app.get('/return_url', (req, res) => {
-	res.send(req.body)
-})
+let start = ({ app }) => {
+	app.use(bodyParser.urlencoded({ extended: false }))
+	app.use(bodyParser.json())
 
-function compile(template, data) {
+	app.get('/return_url', (req, res) => {
+		res.send(req.body)
+	})
+
+	app.post('/callback_url', async (req, res) => {
+		let { key_id, user_id, consumer_key, consumer_secret, key_permissions } = req.body;
+		let oauth =
+		{
+			callback: app_host, 
+			consumer_key: consumer_key, 
+			consumer_secret: consumer_secret
+		}
+		let webhooks = await callApi(WOO.WEBHOOKS.LIST, req.body);
+		for (let i = 0; i < listWebhooks.length; i++) {
+			let webhook = listWebhooks[i];
+			let found = webhooks.find(e => e.topic == webhook.topic);
+			if(found){
+				updateHook({ id: found.id, ...webhook, delivery_url: pathHook})
+			} else{
+				createHook({ id: found.id, ...webhook, delivery_url: pathHook})
+			}
+		}
+		res.send(req.body)
+	})
+
+	app.post('/webhook', (req, res) => {
+		let topic = req.headers['X-Wc-Webhook-Topic'];
+		switch(topic){
+			case 'order.updated':
+			let order = req.body
+			console.log('order', order);
+			break;
+			case 'product.updated':
+			let product = req.body
+			console.log('product', product);
+			break;
+		}
+		res.send(req.body)
+	})
+
+	app.listen(process.env.HOST || 3000)
+}
+
+start({ app });
+
+const compile = (template, data) => {
 	let result = template.toString ? template.toString() : '';
 	result = result.replace(/{.+?}/g, function (matcher) {
 		var path = matcher.slice(1, -1).trim();
@@ -94,44 +136,6 @@ WOO.WEBHOOKS = {
 	}
 }
 
-app.post('/callback_url', async (req, res) => {
-	let { key_id, user_id, consumer_key, consumer_secret, key_permissions } = req.body;
-	let oauth =
-	{
-		callback: app_host, 
-		consumer_key: consumer_key, 
-		consumer_secret: consumer_secret
-	}
-	let webhooks = await callApi(WOO.WEBHOOKS.LIST, req.body);
-	for (let i = 0; i < listWebhooks.length; i++) {
-		let webhook = listWebhooks[i];
-		let found = webhooks.find(e => e.topic == webhook.topic);
-		if(found){
-			updateHook({ id: found.id, ...webhook, delivery_url: pathHook})
-		} else{
-			createHook({ id: found.id, ...webhook, delivery_url: pathHook})
-		}
-	}
-	res.send(req.body)
-})
-
-app.post('/webhook', (req, res) => {
-	let topic = req.headers['X-Wc-Webhook-Topic'];
-	switch(topic){
-		case 'order.updated':
-			let order = req.body
-			console.log('order', order);
-		break;
-		case 'product.updated':
-			let product = req.body
-			console.log('product', product);
-		break;
-	}
-	res.send(req.body)
-});
-
-app.listen(process.env.HOST || 3000)
-
 const pathHook = `${app_host}/webhook`;
 const listWebhooks = [
 {
@@ -202,4 +206,4 @@ async function test(){
 		}
 	}
 }
-test();
+// test();
