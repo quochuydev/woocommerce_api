@@ -69,7 +69,6 @@ const callApi = (option, plus) => {
 			finalConfig.headers['Content-Type'] = 'application/json',
 			finalConfig.body = option.body;
 		}
-		console.log(finalConfig)
 		request(finalConfig, function (e, r, body) {
 			let data = JSON.parse(body);
 			resolve(data);
@@ -117,6 +116,17 @@ app.post('/callback_url', async (req, res) => {
 })
 
 app.post('/webhook', (req, res) => {
+	let topic = req.headers['X-Wc-Webhook-Topic'];
+	switch(topic){
+		case 'order.updated':
+			let order = req.body
+			console.log('order', order);
+		break;
+		case 'product.updated':
+			let product = req.body
+			console.log('product', product);
+		break;
+	}
 	res.send(req.body)
 });
 
@@ -191,7 +201,5 @@ async function test(){
 			createHook({ id: found.id, ...webhook, delivery_url: pathHook})
 		}
 	}
-	let newwebhooks = await callApi(WOO.WEBHOOKS.LIST);
-	console.log(newwebhooks)
 }
 test();
