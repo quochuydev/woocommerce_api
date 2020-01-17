@@ -1,8 +1,10 @@
 const express = require('express');
 const request = require('request');
 const _ = require('lodash');
-const bodyParser= require('body-parser');
+const bodyParser = require('body-parser');
 const app = express();
+
+const PORT = process.env.HOST || 5000;
 
 const app_name = 'MYAPP';
 const version = 'wc/v1';
@@ -14,14 +16,14 @@ const pathHook = `${app_host}/webhook`;
 const url = `${wp_host}/wc-auth/v1/authorize?app_name=${app_name}&scope=read_write&user_id=1&return_url=${app_host}/return_url&callback_url=${app_host}/callback_url`;
 console.log(url)
 
-let start = ({ app }) => {
+const start = ({ app }) => {
 	app.use(bodyParser.urlencoded({ extended: false }))
 	app.use(bodyParser.json())
 
 	app.get('/return_url', (req, res) => {
-		if(req.query && req.query.success){
+		if (req.query && req.query.success) {
 			res.send({ error: false, message: 'Cài app thành công' });
-		} else{
+		} else {
 			res.send({ error: true, message: 'Cài app không thành công' });
 		}
 	})
@@ -30,18 +32,20 @@ let start = ({ app }) => {
 		let { key_id, user_id, consumer_key, consumer_secret, key_permissions } = req.body;
 		let oauth =
 		{
-			callback: app_host, 
-			consumer_key: consumer_key, 
+			callback: app_host,
+			consumer_key: consumer_key,
 			consumer_secret: consumer_secret
 		}
-		let webhooks = await callApi(WOO.WEBHOOKS.LIST);
+
+		API.config({ key: req.body, oauth });
+		let webhooks = await API.call(WOO.WEBHOOKS.LIST);
 		for (let i = 0; i < listWebhooks.length; i++) {
 			let webhook = listWebhooks[i];
 			let found = webhooks.find(e => e.topic == webhook.topic);
-			if(found){
-				updateHook({ id: found.id, ...webhook, delivery_url: pathHook})
-			} else{
-				createHook({ id: found.id, ...webhook, delivery_url: pathHook})
+			if (found) {
+				updateHook({ id: found.id, ...webhook, delivery_url: pathHook })
+			} else {
+				createHook({ id: found.id, ...webhook, delivery_url: pathHook })
 			}
 		}
 		res.send(req.body)
@@ -51,20 +55,19 @@ let start = ({ app }) => {
 		let topic = req.headers['X-Wc-Webhook-Topic'];
 		let data = req.body;
 		console.log('topic: ', topic);
-		switch(topic){
+		switch (topic) {
 			case 'order.updated':
-			console.log('order', data);
-			break;
+				console.log('order', data);
+				break;
 			case 'product.updated':
-			console.log('product', data);
-			break;
+				console.log('product', data);
+				break;
 		}
 		res.send({ topic })
 	})
 
-	app.listen(process.env.HOST || 3000)
+	app.listen(PORT)
 }
-
 start({ app });
 
 const compile = (template, data) => {
@@ -76,51 +79,43 @@ const compile = (template, data) => {
 	return result;
 }
 
-const callApi = (option, plus) => {
-	return new Promise((resolve, reject) => {
-		let config = {
-			"key_id": 5,
-			"user_id": "1",
-			"consumer_key": "ck_29e1e551ad79a2aabe89abe79dd1aac5e0758cbf",
-			"consumer_secret": "cs_c300baffe04f97296dd210ed691706e18e476fd8",
-			"key_permissions": "read_write"
-		}
-		let { key_id, user_id, consumer_key, consumer_secret, key_permissions } = config;
+const API = {
+	config: (config) => {
+		return config;
+	},
+	call: (option, plus) => {
+		return new Promise((resolve, reject) => {
+			let { key_id, user_id, consumer_key, consumer_secret, key_permissions } = API.config().key;
+			let oauth = API.config().oauth;
+			option.auth = oauth;
 
-		let oauth =
-		{
-			callback: app_host, 
-			consumer_key: consumer_key, 
-			consumer_secret: consumer_secret
-		}
-		option.auth = oauth;
+			let url_custom = _.cloneDeep(option.url);
+			if (plus && plus.params) {
+				url_custom = compile(url_custom, plus.params);
+				delete plus.params;
+			}
+			let url = `${wp_host}/wp-json/wc/v1/${url_custom}`;
 
-		let url_custom = _.cloneDeep(option.url);
-		if(plus && plus.params){
-			url_custom = compile(url_custom, plus.params);
-			delete plus.params;
-		}
-		let url = `${wp_host}/wp-json/wc/v1/${url_custom}`;
-
-		for (let key in plus) {
-			option[key] = plus[key];
-		}
-		let finalConfig = {
-			headers: {
-			},
-			method: option.method,
-			url,
-			oauth,
-		}
-		if(['post', 'put'].indexOf(option.method) != -1){
-			finalConfig.headers['Content-Type'] = 'application/json',
-			finalConfig.body = option.body;
-		}
-		request(finalConfig, function (e, r, body) {
-			let data = JSON.parse(body);
-			resolve(data);
-		})
-	});
+			for (let key in plus) {
+				option[key] = plus[key];
+			}
+			let finalConfig = {
+				headers: {
+				},
+				method: option.method,
+				url,
+				oauth,
+			}
+			if (['post', 'put'].indexOf(option.method) != -1) {
+				finalConfig.headers['Content-Type'] = 'application/json',
+					finalConfig.body = option.body;
+			}
+			request(finalConfig, function (e, r, body) {
+				let data = JSON.parse(body);
+				resolve(data);
+			})
+		});
+	}
 }
 
 let WOO = {};
@@ -142,72 +137,89 @@ WOO.WEBHOOKS = {
 }
 
 const listWebhooks = [
-{
-	topic: 'customer.created',
-	status: 'active',
-},
-{
-	topic: 'customer.updated',
-	status: 'active',
-},
-{
-	topic: 'customer.deleted',
-	status: 'active',
-},
-{
-	topic: 'order.created',
-	status: 'active',
-},
-{
-	topic: 'order.updated',
-	status: 'active',
-},
-{
-	topic: 'order.deleted',
-	status: 'active',
-},
-{
-	topic: 'product.created',
-	status: 'active',
-},
-{
-	topic: 'product.updated',
-	status: 'active',
-},
-{
-	topic: 'product.deleted',
-	status: 'active',
-},
+	{
+		topic: 'customer.created',
+		status: 'active',
+	},
+	{
+		topic: 'customer.updated',
+		status: 'active',
+	},
+	{
+		topic: 'customer.deleted',
+		status: 'active',
+	},
+	{
+		topic: 'order.created',
+		status: 'active',
+	},
+	{
+		topic: 'order.updated',
+		status: 'active',
+	},
+	{
+		topic: 'order.deleted',
+		status: 'active',
+	},
+	{
+		topic: 'product.created',
+		status: 'active',
+	},
+	{
+		topic: 'product.updated',
+		status: 'active',
+	},
+	{
+		topic: 'product.deleted',
+		status: 'active',
+	},
 ]
 
 const createHook = async hook => {
-	try{
+	try {
 		console.log('create webhooks')
-		callApi(WOO.WEBHOOKS.CREATE, { body: hook });
-	} catch(error){
+		API.call(WOO.WEBHOOKS.CREATE, { body: hook });
+	} catch (error) {
 		console.log(error)
 	}
 }
 
 const updateHook = async hook => {
-	try{
+	try {
 		console.log(`update webhooks/${hook.id}`)
-		callApi(WOO.WEBHOOKS.UPDATE, { params: { id: hook.id }, body: JSON.stringify(hook) });
-	} catch(error){
+		API.call(WOO.WEBHOOKS.UPDATE, { params: { id: hook.id }, body: JSON.stringify(hook) });
+	} catch (error) {
 		console.log(error)
 	}
 }
 
-async function test(){
-	let webhooks = await callApi(WOO.WEBHOOKS.LIST);
+async function test() {
+	let key = {
+		"key_id": 5,
+		"user_id": "1",
+		"consumer_key": "ck_29e1e551ad79a2aabe89abe79dd1aac5e0758cbf",
+		"consumer_secret": "cs_c300baffe04f97296dd210ed691706e18e476fd8",
+		"key_permissions": "read_write"
+	}
+
+	let oauth =
+	{
+		callback: app_host,
+		consumer_key: consumer_key,
+		consumer_secret: consumer_secret
+	}
+	API.config({ key, oauth });
+
+	let webhooks = await API.call(WOO.WEBHOOKS.LIST);
+	console.log(webhooks)
 	for (let i = 0; i < listWebhooks.length; i++) {
 		let webhook = listWebhooks[i];
 		let found = webhooks.find(e => e.topic == webhook.topic);
-		if(found){
-			updateHook({ id: found.id, ...webhook, delivery_url: pathHook})
-		} else{
-			createHook({ id: found.id, ...webhook, delivery_url: pathHook})
+		if (found) {
+			updateHook({ id: found.id, ...webhook, delivery_url: pathHook })
+		} else {
+			createHook({ id: found.id, ...webhook, delivery_url: pathHook })
 		}
 	}
 }
-// test();
+test();
