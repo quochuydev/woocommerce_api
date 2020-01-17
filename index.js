@@ -16,12 +16,10 @@ class APIBus {
 		if (key) {
 			this.key = key;
 			let { key_id, user_id, consumer_key, consumer_secret, key_permissions } = key;
-			if (app) {
-				this.oauth = {
-					callback: app.app_host,
-					consumer_key,
-					consumer_secret,
-				}
+			this.oauth = {
+				callback: app.app_host,
+				consumer_key,
+				consumer_secret,
 			}
 		}
 	}
