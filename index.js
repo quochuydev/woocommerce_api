@@ -136,12 +136,9 @@ const start = async ({ app }) => {
 	console.log(`${app_host}/build_link`);
 	app.get('/build_link', (req, res) => {
 		let API = new APIBus({ app: { wp_host, app_host, app_name: 'MYAPP', return_url: 'return_url', callback_url: 'callback_url' } });
-		let url = API.buildLink(); 
-		if (url) {
-			res.send({ error: false, url });
-		} else {
-			res.send({ error: true, message: 'Build link install failed.' });
-		}
+		let url = API.buildLink();
+		if (!url) { return res.send({ error: true, message: 'Build link install failed.' }); }
+		res.send({ error: false, url });
 	})
 
 	app.get('/return_url', (req, res) => {
@@ -169,7 +166,7 @@ const start = async ({ app }) => {
 
 	app.post('/webhook', (req, res) => {
 		let topic = req.headers['x-wc-webhook-topic'];
-		if(!topic) { return res.send({ topic: 'No topic!' }); }
+		if (!topic) { return res.send({ topic: 'No topic!' }); }
 		let data = req.body;
 		console.log('topic: ', topic);
 		console.log('data: ', data);
