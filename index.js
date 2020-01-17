@@ -4,21 +4,142 @@ const _ = require('lodash');
 const bodyParser = require('body-parser');
 const app = express();
 
-const PORT = process.env.HOST || 5000;
+const compile = (template, data) => {
+	let result = template.toString ? template.toString() : '';
+	result = result.replace(/{.+?}/g, function (matcher) {
+		var path = matcher.slice(1, -1).trim();
+		return _.get(data, path, '');
+	});
+	return result;
+}
 
-const app_name = 'MYAPP';
-const version = 'wc/v1';
+class APIBus {
+	constructor({ app, key }) {
+		this.app = app;
+		this.key = key;
+		let { key_id, user_id, consumer_key, consumer_secret, key_permissions } = key;
+		this.oauth = {
+			callback: app.app_host,
+			consumer_key,
+			consumer_secret,
+		}
+	}
 
-const app_host = 'https://d4195ac6.ngrok.io';
-const wp_host = 'http://localhost:8080/QH1901';
-const pathHook = `${app_host}/webhook`;
+	buildLink() {
+		let { wp_host, app_host, return_url, callback_url, app_name } = this.app;
+		const url = `${wp_host}/wc-auth/v1/authorize?app_name=${app_name}&scope=read_write&user_id=1&return_url=${app_host}/${return_url}&callback_url=${app_host}/${callback_url}`;
+		return url;
+	}
 
-const url = `${wp_host}/wc-auth/v1/authorize?app_name=${app_name}&scope=read_write&user_id=1&return_url=${app_host}/return_url&callback_url=${app_host}/callback_url`;
-console.log(url)
+	call(option, plus) {
+		return new Promise((resolve, reject) => {
+			let oauth = this.oauth;
+			option.auth = oauth;
 
-const start = ({ app }) => {
+			let url_custom = _.cloneDeep(option.url);
+			if (plus && plus.params) {
+				url_custom = compile(url_custom, plus.params);
+				delete plus.params;
+			}
+			let url = `${this.app.wp_host}/wp-json/wc/v1/${url_custom}`;
+
+			for (let key in plus) {
+				option[key] = plus[key];
+			}
+			let finalConfig = {
+				headers: {
+				},
+				method: option.method,
+				url,
+				oauth,
+			}
+			if (['post', 'put'].indexOf(option.method) != -1) {
+				finalConfig.headers['Content-Type'] = 'application/json',
+					finalConfig.body = option.body;
+			}
+			console.log(`[CALL] [${finalConfig.method}] ${finalConfig.url}`)
+			request(finalConfig, function (e, r, body) {
+				let data = JSON.parse(body);
+				resolve(data);
+			})
+		});
+	}
+}
+
+const start = async ({ app }) => {
 	app.use(bodyParser.urlencoded({ extended: false }))
 	app.use(bodyParser.json())
+	const PORT = process.env.HOST || 5000;
+	const app_host = 'https://2143d9ae.ngrok.io';
+	const wp_host = 'http://localhost:8080/QH1901';
+	const pathHook = `${app_host}/webhook`;
+	let key = {
+		key_id: 5,
+		user_id: "1",
+		consumer_key: "ck_29e1e551ad79a2aabe89abe79dd1aac5e0758cbf",
+		consumer_secret: "cs_c300baffe04f97296dd210ed691706e18e476fd8",
+		key_permissions: "read_write"
+	}
+
+	const listWebhooks = [
+		{
+			topic: 'customer.created',
+			status: 'active',
+		},
+		{
+			topic: 'customer.updated',
+			status: 'active',
+		},
+		{
+			topic: 'customer.deleted',
+			status: 'active',
+		},
+		{
+			topic: 'order.created',
+			status: 'active',
+		},
+		{
+			topic: 'order.updated',
+			status: 'active',
+		},
+		{
+			topic: 'order.deleted',
+			status: 'active',
+		},
+		{
+			topic: 'product.created',
+			status: 'active',
+		},
+		{
+			topic: 'product.updated',
+			status: 'active',
+		},
+		{
+			topic: 'product.deleted',
+			status: 'active',
+		},
+	]
+
+	let WOO = {};
+	WOO.WEBHOOKS = {
+		LIST: {
+			method: `get`,
+			url: `webhooks`
+		},
+		CREATE: {
+			method: `post`,
+			url: `webhooks`,
+			data: {}
+		},
+		UPDATE: {
+			method: `put`,
+			url: `webhooks/{id}`,
+			body: {}
+		}
+	}
+
+	let API = new APIBus({ app: { wp_host, app_host, app_name: 'MYAPP', return_url: 'return_url', callback_url: 'callback_url' }, key });
+	let link = API.buildLink(); console.log(link);
 
 	app.get('/return_url', (req, res) => {
 		if (req.query && req.query.success) {
@@ -29,15 +150,15 @@ const start = ({ app }) => {
 	})
 
 	app.post('/callback_url', async (req, res) => {
-		let API = new APIBus({ app: { host: app_host }, key: req.body });
+		let API = new APIBus({ app: { wp_host, app_host }, key: req.body });
 		let webhooks = await API.call(WOO.WEBHOOKS.LIST);
 		for (let i = 0; i < listWebhooks.length; i++) {
 			let webhook = listWebhooks[i];
 			let found = webhooks.find(e => e.topic == webhook.topic);
 			if (found) {
-				updateHook(API, { id: found.id, ...webhook, delivery_url: pathHook })
+				API.call(WOO.WEBHOOKS.UPDATE, { params: { id: found.id }, body: JSON.stringify({ id: found.id, ...webhook, delivery_url: pathHook }) });
 			} else {
-				createHook(API, { id: found.id, ...webhook, delivery_url: pathHook })
+				API.call(WOO.WEBHOOKS.CREATE, { body: JSON.stringify({ id: found.id, ...webhook, delivery_url: pathHook }) });
 			}
 		}
 		res.send(req.body)
@@ -61,155 +182,3 @@ const start = ({ app }) => {
 	app.listen(PORT)
 }
 start({ app });
-
-const compile = (template, data) => {
-	let result = template.toString ? template.toString() : '';
-	result = result.replace(/{.+?}/g, function (matcher) {
-		var path = matcher.slice(1, -1).trim();
-		return _.get(data, path, '');
-	});
-	return result;
-}
-
-class APIBus {
-	constructor({ app , key }) {
-		this.key = key;
-		let { key_id, user_id, consumer_key, consumer_secret, key_permissions } = key;
-		this.oauth = {
-			callback: app.host,
-			consumer_key,
-			consumer_secret,
-		}
-	}
-
-	call(option, plus) {
-		return new Promise((resolve, reject) => {
-			let { key_id, user_id, consumer_key, consumer_secret, key_permissions } = this.key;
-			let oauth = this.oauth;
-			option.auth = oauth;
-
-			let url_custom = _.cloneDeep(option.url);
-			if (plus && plus.params) {
-				url_custom = compile(url_custom, plus.params);
-				delete plus.params;
-			}
-			let url = `${wp_host}/wp-json/wc/v1/${url_custom}`;
-
-			for (let key in plus) {
-				option[key] = plus[key];
-			}
-			let finalConfig = {
-				headers: {
-				},
-				method: option.method,
-				url,
-				oauth,
-			}
-			if (['post', 'put'].indexOf(option.method) != -1) {
-				finalConfig.headers['Content-Type'] = 'application/json',
-					finalConfig.body = option.body;
-			}
-			request(finalConfig, function (e, r, body) {
-				let data = JSON.parse(body);
-				resolve(data);
-			})
-		});
-	}
-}
-
-let WOO = {};
-WOO.WEBHOOKS = {
-	LIST: {
-		method: `get`,
-		url: `webhooks`
-	},
-	CREATE: {
-		method: `post`,
-		url: `webhooks`,
-		data: {}
-	},
-	UPDATE: {
-		method: `put`,
-		url: `webhooks/{id}`,
-		body: {}
-	}
-}
-
-const listWebhooks = [
-	{
-		topic: 'customer.created',
-		status: 'active',
-	},
-	{
-		topic: 'customer.updated',
-		status: 'active',
-	},
-	{
-		topic: 'customer.deleted',
-		status: 'active',
-	},
-	{
-		topic: 'order.created',
-		status: 'active',
-	},
-	{
-		topic: 'order.updated',
-		status: 'active',
-	},
-	{
-		topic: 'order.deleted',
-		status: 'active',
-	},
-	{
-		topic: 'product.created',
-		status: 'active',
-	},
-	{
-		topic: 'product.updated',
-		status: 'active',
-	},
-	{
-		topic: 'product.deleted',
-		status: 'active',
-	},
-]
-
-const createHook = async (API, hook) => {
-	try {
-		console.log('create webhooks')
-		API.call(WOO.WEBHOOKS.CREATE, { body: hook });
-	} catch (error) {
-		console.log(error)
-	}
-}
-
-const updateHook = async (API, hook) => {
-	try {
-		console.log(`update webhooks/${hook.id}`)
-		API.call(WOO.WEBHOOKS.UPDATE, { params: { id: hook.id }, body: JSON.stringify(hook) });
-	} catch (error) {
-		console.log(error)
-	}
-}
-
-async function test() {
-	let key = {
-		key_id: 5,
-		user_id: "1",
-		consumer_key: "ck_29e1e551ad79a2aabe89abe79dd1aac5e0758cbf",
-		consumer_secret: "cs_c300baffe04f97296dd210ed691706e18e476fd8",
-		key_permissions: "read_write"
-	}
-	let API = new APIBus({ app: { host: app_host }, key });
-	let webhooks = await API.call(WOO.WEBHOOKS.LIST);
-	for (let i = 0; i < listWebhooks.length; i++) {
-		let webhook = listWebhooks[i];
-		let found = webhooks.find(e => e.topic == webhook.topic);
-		if (found) {
-			updateHook(API, { id: found.id, ...webhook, delivery_url: pathHook })
-		} else {
-			createHook(API, { id: found.id, ...webhook, delivery_url: pathHook })
-		}
-	}
-}
-// test();
