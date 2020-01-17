@@ -58,7 +58,7 @@ class APIBus {
 			}
 			request(finalConfig, function (err, response, body) {
 				if (err) { return reject(err); }
-				console.log(`[CALL] [${String(finalConfig.method).toUpperCase()}] ${finalConfig.url} - ${response.status}`)
+				console.log(`[CALL] [${String(finalConfig.method).toUpperCase()}] ${finalConfig.url} - ${response.statusCode}`)
 				let data = JSON.parse(body);
 				resolve(data);
 			})
@@ -72,7 +72,7 @@ const start = async ({ app }) => {
 	// Port expressjs running
 	const PORT = process.env.HOST || 5000;
 	// Ngrok listen port 5000
-	const app_host = 'https://2143d9ae.ngrok.io';
+	const app_host = 'https://93263033.ngrok.io';
 	const pathHook = `${app_host}/webhook`;
 	// Your woocommerce site
 	const wp_host = 'http://localhost:8080/QH1901';
@@ -214,4 +214,4 @@ const test = () => {
 	app.use(bodyParser.json());
 	start({ app });
 }
-// test();
+test();
