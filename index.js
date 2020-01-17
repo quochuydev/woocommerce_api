@@ -79,7 +79,7 @@ const start = async ({ app }) => {
 	const app_host = 'https://2143d9ae.ngrok.io';
 	const pathHook = `${app_host}/webhook`;
 	// Your woocommerce site
-	const wp_host = 'http://localhost:8080/QH1901'; 
+	const wp_host = 'http://localhost:8080/QH1901';
 
 	const listWebhooks = [
 		{ topic: 'customer.created', status: 'active', },
@@ -149,16 +149,35 @@ const start = async ({ app }) => {
 		let topic = req.headers['x-wc-webhook-topic'];
 		if (!topic) { return res.send({ topic: 'No topic!' }); }
 		let data = req.body;
-		console.log('topic: ', topic);
-		console.log('data: ', data);
-		// switch (topic) {
-		// 	case 'order.updated':
-		// 		console.log('order', data);
-		// 		break;
-		// 	case 'product.updated':
-		// 		console.log('product', data);
-		// 		break;
-		// }
+		switch (topic) {
+			case 'customer.created':
+				console.log(data);
+				break;
+			case 'customer.updated':
+				console.log(data);
+				break;
+			case 'customer.deleted':
+				console.log(data);
+				break;
+			case 'order.created':
+				console.log(data);
+				break;
+			case 'order.updated':
+				console.log(data);
+				break;
+			case 'order.deleted':
+				console.log(data);
+				break;
+			case 'product.created':
+				console.log(data);
+				break;
+			case 'product.updated':
+				console.log(data);
+				break;
+			case 'product.deleted':
+				console.log(data);
+				break;
+		}
 		res.send({ topic })
 	})
 
