@@ -134,7 +134,8 @@ const start = async ({ app }) => {
 
 	// callback_url: 'callback_url'
 	app.post('/callback_url', async (req, res) => {
-		let API = new APIBus({ app: { wp_host, app_host }, key: req.body });
+		let key = req.body;
+		let API = new APIBus({ app: { wp_host, app_host }, key });
 		let webhooks = await API.call(WOO.WEBHOOKS.LIST);
 		for (let i = 0; i < listWebhooks.length; i++) {
 			let webhook = listWebhooks[i];
