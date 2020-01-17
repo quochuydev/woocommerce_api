@@ -120,9 +120,9 @@ const start = async ({ app }) => {
 	// return_url: 'return_url'
 	app.get('/return_url', (req, res) => {
 		if (req.query && req.query.success) {
-			res.send({ error: false, message: 'Cài app thành công' });
+			res.send({ error: false, message: 'Install App Success' });
 		} else {
-			res.send({ error: true, message: 'Cài app không thành công' });
+			res.send({ error: true, message: 'Install App Failed' });
 		}
 	})
 
