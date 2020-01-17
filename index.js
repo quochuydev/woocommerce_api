@@ -68,6 +68,8 @@ class APIBus {
 	}
 }
 
+module.exports = APIBus;
+
 const start = async ({ app }) => {
 	app.use(bodyParser.urlencoded({ extended: false }));
 	app.use(bodyParser.json());
