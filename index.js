@@ -44,17 +44,17 @@ let start = ({ app }) => {
 
 	app.post('/webhook', (req, res) => {
 		let topic = req.headers['X-Wc-Webhook-Topic'];
+		let data = req.body;
+		console.log('topic: ', topic);
 		switch(topic){
 			case 'order.updated':
-			let order = req.body
-			console.log('order', order);
+			console.log('order', data);
 			break;
 			case 'product.updated':
-			let product = req.body
-			console.log('product', product);
+			console.log('product', data);
 			break;
 		}
-		res.send(req.body)
+		res.send({ topic })
 	})
 
 	app.listen(process.env.HOST || 3000)
