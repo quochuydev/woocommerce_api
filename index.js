@@ -213,4 +213,4 @@ const test = () => {
 	app.use(bodyParser.json());
 	start({ app });
 }
-test();
+// test();
