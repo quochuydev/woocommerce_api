@@ -46,6 +46,8 @@ class APIBus {
 				option[key] = plus[key];
 			}
 			let finalConfig = {
+				headers: {
+				},
 				method: option.method,
 				url,
 			}
