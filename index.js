@@ -1,8 +1,5 @@
-const express = require('express');
 const request = require('request');
 const _ = require('lodash');
-const bodyParser = require('body-parser');
-const app = express();
 
 const compile = (template, data) => {
 	let result = template.toString ? template.toString() : '';
@@ -71,8 +68,6 @@ class APIBus {
 module.exports = APIBus;
 
 const start = async ({ app }) => {
-	app.use(bodyParser.urlencoded({ extended: false }));
-	app.use(bodyParser.json());
 	// Port expressjs running
 	const PORT = process.env.HOST || 5000;
 	// Ngrok listen port 5000
@@ -183,4 +178,13 @@ const start = async ({ app }) => {
 
 	app.listen(PORT)
 }
-start({ app });
+
+const test = () =>{
+	const express = require('express');
+	const bodyParser = require('body-parser');
+	const app = express();
+	app.use(bodyParser.urlencoded({ extended: false }));
+	app.use(bodyParser.json());
+	start({ app });
+}
+test();
