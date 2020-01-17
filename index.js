@@ -16,10 +16,12 @@ class APIBus {
 		if (key) {
 			this.key = key;
 			let { key_id, user_id, consumer_key, consumer_secret, key_permissions } = key;
-			this.oauth = {
-				callback: app.app_host,
-				consumer_key,
-				consumer_secret,
+			if (app) {
+				this.oauth = {
+					callback: app.app_host,
+					consumer_key,
+					consumer_secret,
+				}
 			}
 		}
 	}
@@ -106,6 +108,13 @@ const start = async ({ app }) => {
 		}
 	}
 
+	WOO.PRODUCTS = {
+		LIST: {
+			method: 'get',
+			url: 'products'
+		}
+	}
+
 	console.log(`${app_host}/build_link`);
 	app.get('/build_link', (req, res) => {
 		let API = new APIBus({ app: { wp_host, app_host, app_name: 'MYAPP', return_url: 'return_url', callback_url: 'callback_url' } });
@@ -137,6 +146,24 @@ const start = async ({ app }) => {
 			}
 		}
 		res.send(req.body)
+	})
+
+	app.get('/products', async (req, res) => {
+		try {
+			let key = {
+				"key_id": 35,
+				"user_id": "1",
+				"consumer_key": "ck_0f744950e64f020e7bfc394de00d56425b8cf2e1",
+				"consumer_secret": "cs_1a857af82a5f37e3dce4c7b7bdce7d8717eb76f9",
+				"key_permissions": "read_write"
+			}
+			let API = new APIBus({ app: { wp_host, app_host }, key });
+			let products = await API.call(WOO.PRODUCTS.LIST);
+			res.send({ error: false, data: products });
+		} catch (error) {
+			console.log(error);
+			res.send({ error: true });
+		}
 	})
 
 	// pathHook = `/webhook`;
@@ -179,7 +206,7 @@ const start = async ({ app }) => {
 	app.listen(PORT)
 }
 
-const test = () =>{
+const test = () => {
 	const express = require('express');
 	const bodyParser = require('body-parser');
 	const app = express();
