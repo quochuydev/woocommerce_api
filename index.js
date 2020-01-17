@@ -136,6 +136,17 @@ const start = async ({ app }) => {
 	let API = new APIBus({ app: { wp_host, app_host, app_name: 'MYAPP', return_url: 'return_url', callback_url: 'callback_url' } });
 	let link = API.buildLink(); console.log(link);
 
+	app.get('/build_link', (req, res) => {
+		let API = new APIBus({ app: { wp_host, app_host, app_name: 'MYAPP', return_url: 'return_url', callback_url: 'callback_url' } });
+		let url = API.buildLink(); 
+		console.log(url);
+		if (url) {
+			res.send({ error: false, url });
+		} else {
+			res.send({ error: true, message: 'Build link install failed.' });
+		}
+	})
+
 	app.get('/return_url', (req, res) => {
 		if (req.query && req.query.success) {
 			res.send({ error: false, message: 'Cài app thành công' });
@@ -153,24 +164,26 @@ const start = async ({ app }) => {
 			if (found) {
 				API.call(WOO.WEBHOOKS.UPDATE, { params: { id: found.id }, body: JSON.stringify({ id: found.id, ...webhook, delivery_url: pathHook }) });
 			} else {
-				API.call(WOO.WEBHOOKS.CREATE, { body: JSON.stringify({ id: found.id, ...webhook, delivery_url: pathHook }) });
+				API.call(WOO.WEBHOOKS.CREATE, { body: JSON.stringify({ ...webhook, delivery_url: pathHook }) });
 			}
 		}
 		res.send(req.body)
 	})
 
 	app.post('/webhook', (req, res) => {
-		let topic = req.headers['X-Wc-Webhook-Topic'];
+		let topic = req.headers['x-wc-webhook-topic'];
+		if(!topic) { return res.send({ topic: 'No topic!' }); }
 		let data = req.body;
 		console.log('topic: ', topic);
-		switch (topic) {
-			case 'order.updated':
-				console.log('order', data);
-				break;
-			case 'product.updated':
-				console.log('product', data);
-				break;
-		}
+		console.log('data: ', data);
+		// switch (topic) {
+		// 	case 'order.updated':
+		// 		console.log('order', data);
+		// 		break;
+		// 	case 'product.updated':
+		// 		console.log('product', data);
+		// 		break;
+		// }
 		res.send({ topic })
 	})
 
