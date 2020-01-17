@@ -69,12 +69,15 @@ class APIBus {
 }
 
 const start = async ({ app }) => {
-	app.use(bodyParser.urlencoded({ extended: false }))
-	app.use(bodyParser.json())
+	app.use(bodyParser.urlencoded({ extended: false }));
+	app.use(bodyParser.json());
+	// Port expressjs running
 	const PORT = process.env.HOST || 5000;
+	// Ngrok listen port 5000
 	const app_host = 'https://2143d9ae.ngrok.io';
-	const wp_host = 'http://localhost:8080/QH1901';
 	const pathHook = `${app_host}/webhook`;
+	// Your woocommerce site
+	const wp_host = 'http://localhost:8080/QH1901'; 
 
 	const listWebhooks = [
 		{ topic: 'customer.created', status: 'active', },
