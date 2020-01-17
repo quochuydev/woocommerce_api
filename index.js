@@ -141,6 +141,7 @@ const start = async ({ app }) => {
 		res.send({ error: false, url });
 	})
 
+	// return_url: 'return_url'
 	app.get('/return_url', (req, res) => {
 		if (req.query && req.query.success) {
 			res.send({ error: false, message: 'Cài app thành công' });
@@ -149,6 +150,7 @@ const start = async ({ app }) => {
 		}
 	})
 
+	// callback_url: 'callback_url'
 	app.post('/callback_url', async (req, res) => {
 		let API = new APIBus({ app: { wp_host, app_host }, key: req.body });
 		let webhooks = await API.call(WOO.WEBHOOKS.LIST);
@@ -164,6 +166,7 @@ const start = async ({ app }) => {
 		res.send(req.body)
 	})
 
+	// pathHook = `/webhook`;
 	app.post('/webhook', (req, res) => {
 		let topic = req.headers['x-wc-webhook-topic'];
 		if (!topic) { return res.send({ topic: 'No topic!' }); }
