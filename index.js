@@ -16,12 +16,14 @@ const compile = (template, data) => {
 class APIBus {
 	constructor({ app, key }) {
 		this.app = app;
-		this.key = key;
-		let { key_id, user_id, consumer_key, consumer_secret, key_permissions } = key;
-		this.oauth = {
-			callback: app.app_host,
-			consumer_key,
-			consumer_secret,
+		if (key) {
+			this.key = key;
+			let { key_id, user_id, consumer_key, consumer_secret, key_permissions } = key;
+			this.oauth = {
+				callback: app.app_host,
+				consumer_key,
+				consumer_secret,
+			}
 		}
 	}
 
@@ -57,7 +59,7 @@ class APIBus {
 				finalConfig.headers['Content-Type'] = 'application/json',
 					finalConfig.body = option.body;
 			}
-			console.log(`[CALL] [${finalConfig.method}] ${finalConfig.url}`)
+			console.log(`[CALL] [${String(finalConfig.method).toUpperCase()}] ${finalConfig.url}`)
 			request(finalConfig, function (e, r, body) {
 				let data = JSON.parse(body);
 				resolve(data);
@@ -73,13 +75,6 @@ const start = async ({ app }) => {
 	const app_host = 'https://2143d9ae.ngrok.io';
 	const wp_host = 'http://localhost:8080/QH1901';
 	const pathHook = `${app_host}/webhook`;
-	let key = {
-		key_id: 5,
-		user_id: "1",
-		consumer_key: "ck_29e1e551ad79a2aabe89abe79dd1aac5e0758cbf",
-		consumer_secret: "cs_c300baffe04f97296dd210ed691706e18e476fd8",
-		key_permissions: "read_write"
-	}
 
 	const listWebhooks = [
 		{
@@ -138,7 +133,7 @@ const start = async ({ app }) => {
 		}
 	}
 
-	let API = new APIBus({ app: { wp_host, app_host, app_name: 'MYAPP', return_url: 'return_url', callback_url: 'callback_url' }, key });
+	let API = new APIBus({ app: { wp_host, app_host, app_name: 'MYAPP', return_url: 'return_url', callback_url: 'callback_url' } });
 	let link = API.buildLink(); console.log(link);
 
 	app.get('/return_url', (req, res) => {
