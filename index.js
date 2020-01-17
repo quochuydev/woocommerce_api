@@ -33,11 +33,11 @@ const start = ({ app }) => {
 		let oauth =
 		{
 			callback: app_host,
-			consumer_key: consumer_key,
-			consumer_secret: consumer_secret
+			consumer_key,
+			consumer_secret,
 		}
 
-		API.config({ key: req.body, oauth });
+		let API = new APIBus({ key: req.body, oauth });
 		let webhooks = await API.call(WOO.WEBHOOKS.LIST);
 		for (let i = 0; i < listWebhooks.length; i++) {
 			let webhook = listWebhooks[i];
@@ -79,14 +79,16 @@ const compile = (template, data) => {
 	return result;
 }
 
-const API = {
-	config: (config) => {
-		return config;
-	},
-	call: (option, plus) => {
+class APIBus {
+	constructor({ key, oauth }) {
+		this.key = key;
+		this.oauth = oauth;
+	}
+
+	call(option, plus) {
 		return new Promise((resolve, reject) => {
-			let { key_id, user_id, consumer_key, consumer_secret, key_permissions } = API.config().key;
-			let oauth = API.config().oauth;
+			let { key_id, user_id, consumer_key, consumer_secret, key_permissions } = this.key;
+			let oauth = this.oauth;
 			option.auth = oauth;
 
 			let url_custom = _.cloneDeep(option.url);
@@ -175,7 +177,7 @@ const listWebhooks = [
 	},
 ]
 
-const createHook = async hook => {
+const createHook = async (API, hook) => {
 	try {
 		console.log('create webhooks')
 		API.call(WOO.WEBHOOKS.CREATE, { body: hook });
@@ -184,7 +186,7 @@ const createHook = async hook => {
 	}
 }
 
-const updateHook = async hook => {
+const updateHook = async (API, hook) => {
 	try {
 		console.log(`update webhooks/${hook.id}`)
 		API.call(WOO.WEBHOOKS.UPDATE, { params: { id: hook.id }, body: JSON.stringify(hook) });
@@ -195,30 +197,28 @@ const updateHook = async hook => {
 
 async function test() {
 	let key = {
-		"key_id": 5,
-		"user_id": "1",
-		"consumer_key": "ck_29e1e551ad79a2aabe89abe79dd1aac5e0758cbf",
-		"consumer_secret": "cs_c300baffe04f97296dd210ed691706e18e476fd8",
-		"key_permissions": "read_write"
+		key_id: 5,
+		user_id: "1",
+		consumer_key: "ck_29e1e551ad79a2aabe89abe79dd1aac5e0758cbf",
+		consumer_secret: "cs_c300baffe04f97296dd210ed691706e18e476fd8",
+		key_permissions: "read_write"
 	}
-
-	let oauth =
-	{
+	let { key_id, user_id, consumer_key, consumer_secret, key_permissions } = key;
+	let oauth = {
 		callback: app_host,
-		consumer_key: consumer_key,
-		consumer_secret: consumer_secret
+		consumer_key,
+		consumer_secret,
 	}
-	API.config({ key, oauth });
+	let API = new APIBus({ key, oauth });
 
 	let webhooks = await API.call(WOO.WEBHOOKS.LIST);
-	console.log(webhooks)
 	for (let i = 0; i < listWebhooks.length; i++) {
 		let webhook = listWebhooks[i];
 		let found = webhooks.find(e => e.topic == webhook.topic);
 		if (found) {
-			updateHook({ id: found.id, ...webhook, delivery_url: pathHook })
+			updateHook(API, { id: found.id, ...webhook, delivery_url: pathHook })
 		} else {
-			createHook({ id: found.id, ...webhook, delivery_url: pathHook })
+			createHook(API, { id: found.id, ...webhook, delivery_url: pathHook })
 		}
 	}
 }
