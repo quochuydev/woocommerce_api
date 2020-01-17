@@ -4,13 +4,14 @@ const _ = require('lodash');
 const bodyParser= require('body-parser');
 const app = express();
 
-let app_name = 'MYAPP';
-let version = 'wc/v1';
+const app_name = 'MYAPP';
+const version = 'wc/v1';
 
-let app_host = 'https://ebab3545.ngrok.io'
-let wp_host = 'http://localhost:8080/QH1901'
+const app_host = 'https://ebab3545.ngrok.io';
+const wp_host = 'http://localhost:8080/QH1901';
+const pathHook = `${app_host}/webhook`;
 
-let url = `${wp_host}/wc-auth/v1/authorize?app_name=${app_name}&scope=read_write&user_id=1&return_url=${app_host}/return_url&callback_url=${app_host}/callback_url`;
+const url = `${wp_host}/wc-auth/v1/authorize?app_name=${app_name}&scope=read_write&user_id=1&return_url=${app_host}/return_url&callback_url=${app_host}/callback_url`;
 console.log(url)
 
 let start = ({ app }) => {
@@ -18,7 +19,11 @@ let start = ({ app }) => {
 	app.use(bodyParser.json())
 
 	app.get('/return_url', (req, res) => {
-		res.send(req.body)
+		if(req.query && req.query.success){
+			res.send({ error: false, message: 'Cài app thành công' });
+		} else{
+			res.send({ error: true, message: 'Cài app không thành công' });
+		}
 	})
 
 	app.post('/callback_url', async (req, res) => {
@@ -29,7 +34,7 @@ let start = ({ app }) => {
 			consumer_key: consumer_key, 
 			consumer_secret: consumer_secret
 		}
-		let webhooks = await callApi(WOO.WEBHOOKS.LIST, req.body);
+		let webhooks = await callApi(WOO.WEBHOOKS.LIST);
 		for (let i = 0; i < listWebhooks.length; i++) {
 			let webhook = listWebhooks[i];
 			let found = webhooks.find(e => e.topic == webhook.topic);
@@ -136,7 +141,6 @@ WOO.WEBHOOKS = {
 	}
 }
 
-const pathHook = `${app_host}/webhook`;
 const listWebhooks = [
 {
 	topic: 'customer.created',
