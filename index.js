@@ -52,6 +52,19 @@ class APIBus {
 				url,
 				oauth,
 			}
+			if (/^https/i.test(url)) {
+				finalConfig.auth = {
+					user: oauth.consumer_key,
+					pass: oauth.consumer_secret,
+				};
+			} else {
+				finalConfig.oauth = {
+					callback: oauth.callback,
+					consumer_key: oauth.consumer_key,
+					consumer_secret: oauth.consumer_secret
+				}
+			}
+
 			if (['post', 'put'].indexOf(option.method) != -1) {
 				finalConfig.headers['Content-Type'] = 'application/json',
 					finalConfig.body = option.body;
