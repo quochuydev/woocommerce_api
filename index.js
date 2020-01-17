@@ -57,8 +57,8 @@ class APIBus {
 					finalConfig.body = option.body;
 			}
 			request(finalConfig, function (err, response, body) {
-				console.log(`[CALL] [${String(finalConfig.method).toUpperCase()}] ${finalConfig.url} - ${response.status}`)
 				if (err) { return reject(err); }
+				console.log(`[CALL] [${String(finalConfig.method).toUpperCase()}] ${finalConfig.url} - ${response.status}`)
 				let data = JSON.parse(body);
 				resolve(data);
 			})
