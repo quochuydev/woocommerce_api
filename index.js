@@ -124,7 +124,7 @@ const start = async ({ app }) => {
 		CREATE: {
 			method: `post`,
 			url: `webhooks`,
-			data: {}
+			body: {}
 		},
 		UPDATE: {
 			method: `put`,
