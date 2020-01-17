@@ -137,7 +137,6 @@ const start = async ({ app }) => {
 	app.get('/build_link', (req, res) => {
 		let API = new APIBus({ app: { wp_host, app_host, app_name: 'MYAPP', return_url: 'return_url', callback_url: 'callback_url' } });
 		let url = API.buildLink(); 
-		console.log(url);
 		if (url) {
 			res.send({ error: false, url });
 		} else {
