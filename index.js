@@ -9,7 +9,7 @@ const PORT = process.env.HOST || 5000;
 const app_name = 'MYAPP';
 const version = 'wc/v1';
 
-const app_host = 'https://ebab3545.ngrok.io';
+const app_host = 'https://d4195ac6.ngrok.io';
 const wp_host = 'http://localhost:8080/QH1901';
 const pathHook = `${app_host}/webhook`;
 
@@ -29,23 +29,15 @@ const start = ({ app }) => {
 	})
 
 	app.post('/callback_url', async (req, res) => {
-		let { key_id, user_id, consumer_key, consumer_secret, key_permissions } = req.body;
-		let oauth =
-		{
-			callback: app_host,
-			consumer_key,
-			consumer_secret,
-		}
-
-		let API = new APIBus({ key: req.body, oauth });
+		let API = new APIBus({ app: { host: app_host }, key: req.body });
 		let webhooks = await API.call(WOO.WEBHOOKS.LIST);
 		for (let i = 0; i < listWebhooks.length; i++) {
 			let webhook = listWebhooks[i];
 			let found = webhooks.find(e => e.topic == webhook.topic);
 			if (found) {
-				updateHook({ id: found.id, ...webhook, delivery_url: pathHook })
+				updateHook(API, { id: found.id, ...webhook, delivery_url: pathHook })
 			} else {
-				createHook({ id: found.id, ...webhook, delivery_url: pathHook })
+				createHook(API, { id: found.id, ...webhook, delivery_url: pathHook })
 			}
 		}
 		res.send(req.body)
@@ -80,9 +72,14 @@ const compile = (template, data) => {
 }
 
 class APIBus {
-	constructor({ key, oauth }) {
+	constructor({ app , key }) {
 		this.key = key;
-		this.oauth = oauth;
+		let { key_id, user_id, consumer_key, consumer_secret, key_permissions } = key;
+		this.oauth = {
+			callback: app.host,
+			consumer_key,
+			consumer_secret,
+		}
 	}
 
 	call(option, plus) {
@@ -203,14 +200,7 @@ async function test() {
 		consumer_secret: "cs_c300baffe04f97296dd210ed691706e18e476fd8",
 		key_permissions: "read_write"
 	}
-	let { key_id, user_id, consumer_key, consumer_secret, key_permissions } = key;
-	let oauth = {
-		callback: app_host,
-		consumer_key,
-		consumer_secret,
-	}
-	let API = new APIBus({ key, oauth });
-
+	let API = new APIBus({ app: { host: app_host }, key });
 	let webhooks = await API.call(WOO.WEBHOOKS.LIST);
 	for (let i = 0; i < listWebhooks.length; i++) {
 		let webhook = listWebhooks[i];
@@ -222,4 +212,4 @@ async function test() {
 		}
 	}
 }
-test();
+// test();
